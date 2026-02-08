@@ -24,4 +24,5 @@ module hex7seg(
             default: y = 7'b1111111;
         endcase
     end
+
 endmodule
