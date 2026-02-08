@@ -2,8 +2,6 @@ module hex7seg(
     input  logic [3:0] a,
     output logic [6:0] y
 );
-<<<<<<< HEAD
-
     always_comb begin
         case (a)
             4'h0: y = 7'b1000000;
@@ -25,30 +23,5 @@ module hex7seg(
             default: y = 7'b1111111;
         endcase
     end
-
-=======
-
-    always_comb begin
-        case (a)
-            4'h0: y = 7'b1000000;
-            4'h1: y = 7'b1111001;
-            4'h2: y = 7'b0100100;
-            4'h3: y = 7'b0110000;
-            4'h4: y = 7'b0011001;
-            4'h5: y = 7'b0010010;
-            4'h6: y = 7'b0000010;
-            4'h7: y = 7'b1111000;
-            4'h8: y = 7'b0000000;
-            4'h9: y = 7'b0010000;
-            4'hA: y = 7'b0001000;
-            4'hB: y = 7'b0000011;
-            4'hC: y = 7'b1000110;
-            4'hD: y = 7'b0100001;
-            4'hE: y = 7'b0000110;
-            4'hF: y = 7'b0001110;
-            default: y = 7'b1111111;
-        endcase
-    end
->>>>>>> b56c1b5b3d51da9dd27d41a8cd5968ef4f405a86
 endmodule
 
