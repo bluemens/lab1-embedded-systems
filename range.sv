@@ -23,48 +23,44 @@ module range
 
 	logic [RAM_ADDR_BITS - 1:0] 	 num;         // The RAM address to write
 	logic 			 running = 0; // True during the iterations
+	
 
    /* Replace this comment and the code below with your solution,
       which should generate running, done, cgo, n, num, we, and din */
+	
    	always_ff @(posedge clk) begin
 		if (go) begin
-			cgo <= go;
+			cgo <= 1;
 			n <= start;
 			running <= 1;
 			num <= 0;
-			din <= 1;
-		else
-			cgo <= 0;
-	end
-		
-	always_ff @(posedge clk) begin
-		if (~cgo && ~cdone) begin
-			din <= din + 16'h1;
-	end
-		
-	always_ff @(posedge clk) begin
-		if (cdone) begin
-			we <= 1;				
-		end else
-			if(we) begin
-				n <= n + 32'd1;
-				din <= 0;
-				cgo <= 1;
-				num <= num + 15'd1;
-			end
-			we <= 0;
-			
-	end
-
-	always_ff @(posedge clk) begin
-		if (we && (num == RAM_WORDS)) begin
-			running <= 0;
-			done <= 1;
-		end else
+			din <= 0;
 			done <= 0;
-	end
+			we <=  0;
+		end else if (running) begin	
+			we <= 0;
+			cgo <= 0;
+					
+			if (!cgo && !cdone) begin
+				din <= din + 1;
+			end
 
-		
+								
+			if (we) begin
+				if (num == RAM_ADDR_BITS'(RAM_WORDS - 1)) begin
+					running <= 0;
+					done <= 1;
+				end else begin
+					num <= num + 1;
+					n <= n + 1;
+					din <= 0;
+					cgo <= 1;
+				end
+			end else if (cdone & !cgo) begin
+				we <= 1;
+			end
+		end
+	end		
    /* Replace this comment and the code above with your solution */
 
 	logic 			 we;                    // Write din to addr
