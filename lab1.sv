@@ -1,9 +1,9 @@
 // CSEE 4840 Lab 1: Run and Display Collatz Conjecture Iteration Counts
 //
-// Spring 2023
+// Spring 2026
 //
-// By: <your name here>
-// Uni: <your uni here>
+// By: Owen Cooper and Maximilian Comfere
+// Uni: odc2106 and mkc2182
 
 module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	     
@@ -41,6 +41,8 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
    assign go = KEY[0];
    assign start = {SW[1:0], SW, SW, SW};
    assign n = {SW[1:0], SW};
+
+	
    
    
   
