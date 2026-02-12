@@ -28,6 +28,7 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 
 	logic k0, k1, k2, k3;
 	logic [9:0] base_number;
+	
 
 	assign k0 = ~KEY[0];
 	assign k1 = ~KEY[1];
@@ -40,20 +41,20 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 
 	logic [7:0] offset;
 
-	logic [21:0] hold_ctrl;
+	logic [22:0] hold_ctrl;
 	logic hold_tick;
 
 	always_ff @(posedge clk) begin
-		hold_ctrl <= hold_ctrl + 22'd1;
+		hold_ctrl <= hold_ctrl + 23'd1;
 	end
 	
-	assign hold_tick = (hold_ctrl == 22'd0);
+	assign hold_tick = (hold_ctrl == 23'd0);
 
 	always_ff @(posedge clk) begin
 		// if k2 is pressed reset the difference
 		if (k2) begin
 			offset <= 8'd0;
-		end else if (hold_tick) begin
+			end else if (hold_tick) begin
 			// if only key 0 then increment
 			if (k0 && !k1) begin
 				if (offset != 8'hFF) offset <= offset + 8'd1;
@@ -63,6 +64,15 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 			end
 		end
 	end
+
+	always_ff @(posedge CLOCK_50) begin
+		if (k2) begin
+			iters_display <= 16'd0;  // Reset display on KEY[2]
+		end else if (done) begin
+			iters_display <= iters;  // Latch result when done
+		end
+	end
+
 	// creates the signal for when k3 is pressed
 	// but so it doesnt go repeatedly
 	logic k3_prev;
@@ -81,6 +91,7 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	end
 
 	logic [15:0] iters;
+	logic [15:0] iters_display = 16'd0;
 
 	range #(.RAM_WORDS(256), .RAM_ADDR_BITS(8)) u_range (
 		.clk(clk),
@@ -102,9 +113,9 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 		n_t = (display_number / 10) % 10;
 		n_o = display_number % 10;	
 		
-        i_h = (iters / 100) % 10;
-        i_t = (iters / 10) % 10; 
-        i_o = iters % 10;
+        i_h = (iters_display / 100) % 10;
+        i_t = (iters_display / 10) % 10; 
+        i_o = iters_display % 10;
 	end
 
 	hex7seg H0(.a(i_o), .y(HEX0));
