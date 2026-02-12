@@ -59,6 +59,8 @@ module range
 			end else if (cdone & !cgo) begin
 				we <= 1;
 			end
+		end else begin
+			done <= 0;
 		end
 	end		
    /* Replace this comment and the code above with your solution */

@@ -35,11 +35,11 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	assign k2 = ~KEY[2];
 	assign k3 = ~KEY[3];
 
-	assign LEDR[9:0] = base_number;
+	assign LEDR[7:0] = base_number;
 
 	assign base_number = SW[9:0];
 
-	logic [7:0] offset;
+	logic [7:0] offset = 8'd0;
 
 	logic [22:0] hold_ctrl;
 	logic hold_tick;
@@ -65,14 +65,6 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 		end
 	end
 
-	always_ff @(posedge CLOCK_50) begin
-		if (k2) begin
-			iters_display <= 16'd0;  // Reset display on KEY[2]
-		end else if (done) begin
-			iters_display <= iters;  // Latch result when done
-		end
-	end
-
 	// creates the signal for when k3 is pressed
 	// but so it doesnt go repeatedly
 	logic k3_prev;
@@ -81,17 +73,14 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 		k3_prev <= k3;
 	end
 	
-	assign go = k3 & ~k3_prev;
 
-	// stores the iteration counts
+	//start number
 	logic [31:0] range_start;
-	
-	always_ff @(posedge clk) begin
-		if (go) range_start <= {22'd0, base_number} + {24'd0, offset};
-	end
+	assign go = k3 & ~k3_prev;
+	assign range_start = {22'd0, base_number} + {24'd0, offset};
 
 	logic [15:0] iters;
-	logic [15:0] iters_display = 16'd0;
+	//logic [15:0] iters_display = 16'd0;
 
 	range #(.RAM_WORDS(256), .RAM_ADDR_BITS(8)) u_range (
 		.clk(clk),
@@ -101,21 +90,20 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 		.count(iters)
 	);
 
-	logic [11:0] display_number;
-	assign display_number = {2'b00, base_number} + offset;
+	//logic [11:0] display_number;
 	
 	// display bits ( hundreds, tens, ones)
 	logic [3:0] n_h, n_t, n_o;
 	logic [3:0] i_h, i_t, i_o;
 
 	always_comb begin
-		n_h = (display_number / 100) % 10;
-		n_t = (display_number / 10) % 10;
-		n_o = display_number % 10;	
+		n_h = (range_start / 100) % 10;
+		n_t = (range_start / 10) % 10;
+		n_o = range_start % 10;	
 		
-        i_h = (iters_display / 100) % 10;
-        i_t = (iters_display / 10) % 10; 
-        i_o = iters_display % 10;
+        i_h = (iters / 100) % 10;
+        i_t = (iters / 10) % 10; 
+        i_o = iters % 10;
 	end
 
 	hex7seg H0(.a(i_o), .y(HEX0));
@@ -125,6 +113,9 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	hex7seg H3(.a(n_o), .y(HEX3));
 	hex7seg H4(.a(n_t), .y(HEX4));
 	hex7seg H5(.a(n_h), .y(HEX5)); 
+
+	assign LEDR[9] = done;
+	assign LEDR[8] = go;
  
 endmodule
 
