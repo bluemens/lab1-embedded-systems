@@ -16,24 +16,25 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 
 	     output logic [9:0] LEDR // LEDs above the switches; LED[0] on right
 	     );
-   logic                        clk, go, done;
-   logic [31:0]                 start;
-   logic [15:0]                 count;
+	logic                        clk, go, done;
+	logic [31:0]                 start;
+	logic [15:0]                 count;
 
-   logic [11:0]                 n;
+	logic [11:0]                 n;
    
-   assign clk = CLOCK_50;
- 
-   range #(256, 8) // RAM_WORDS = 256, RAM_ADDR_BITS = 8)
-         r ( .* ); // Connect everything with matching names
+	assign clk = CLOCK_50;
 
-//////////////
+/////////////
 
 	logic k0, k1, k2, k3;
-	assign k0 = ~key[0];
-	assign k1 = ~key[1];
-	assign k2 = ~key[2];
-	assign k3 = ~key[4];
+	logic [9:0] base_number;
+
+	assign k0 = ~KEY[0];
+	assign k1 = ~KEY[1];
+	assign k2 = ~KEY[2];
+	assign k3 = ~KEY[3];
+
+	assign LEDR[9:0] = base_number;
 
 	assign base_number = SW[9:0];
 
@@ -42,13 +43,13 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	logic [21:0] hold_ctrl;
 	logic hold_tick;
 
-	always_ff @(posedge clkCLOCK_50) begin
-		hold <= hold + 22'd1;
+	always_ff @(posedge clk) begin
+		hold_ctrl <= hold_ctrl + 22'd1;
 	end
 	
-	assign hold_tick = (hold == 22'd0);
+	assign hold_tick = (hold_ctrl == 22'd0);
 
-	always_ff @(posedge CLOCK_50) begin
+	always_ff @(posedge clk) begin
 		// if k2 is pressed reset the difference
 		if (k2) begin
 			offset <= 8'd0;
@@ -66,57 +67,53 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	// but so it doesnt go repeatedly
 	logic k3_prev;
 	
-	always_ff @(posedge clkCLOCK_50) begin
+	always_ff @(posedge clk) begin
 		k3_prev <= k3;
 	end
 	
-	assign go = kz & ~k3_prev;
+	assign go = k3 & ~k3_prev;
 
 	// stores the iteration counts
 	logic [31:0] range_start;
 	
-	always_comb begin
-		if (go) range_start = {22'd0, base_number};
-		else range_start = {22'd0, offset};
+	always_ff @(posedge clk) begin
+		if (go) range_start <= {22'd0, base_number} + {24'd0, offset};
 	end
 
-	logic done;
 	logic [15:0] iters;
 
 	range #(.RAM_WORDS(256), .RAM_ADDR_BITS(8)) u_range (
-		.clk (CLOCK_50),
-		.go (go),
-		.start range_start),
-		.done (done),
-		.count (iters)
+		.clk(clk),
+		.go(go),
+		.start(range_start),
+		.done(done),
+		.count(iters)
 	);
 
 	logic [11:0] display_number;
-	assign display_number = {2'b00, base_n} + offset;
+	assign display_number = {2'b00, base_number} + offset;
 	
 	// display bits ( hundreds, tens, ones)
 	logic [3:0] n_h, n_t, n_o;
 	logic [3:0] i_h, i_t, i_o;
 
 	always_comb begin
-		int nn = display_number;
-		n_h = (nn/ 100) & 10;
-		n_t = (nn/ 10) & 10;
-		n_o = nn % 10;	
+		n_h = (display_number / 100) % 10;
+		n_t = (display_number / 10) % 10;
+		n_o = display_number % 10;	
 		
-		int ii = iters;
-                n_i = (ii/ 100) & 10;
-                n_i = (ii / 10) & 10; 
-                n_i = ii % 10;
+        i_h = (iters / 100) % 10;
+        i_t = (iters / 10) % 10; 
+        i_o = iters % 10;
 	end
 
 	hex7seg H0(.a(i_o), .y(HEX0));
 	hex7seg H1(.a(i_t), .y(HEX1));
-	hex7seg H1(.a(i_h), .y(HEX2));
+	hex7seg H2(.a(i_h), .y(HEX2));
 
-	hex7seg H0(.a(i_o), .y(HEX0));
-	hex7seg H1(.a(i_t), .y(HEX1));
-	hex7seg H2(.a(i_h), .y(HEX2)); 
+	hex7seg H3(.a(n_o), .y(HEX3));
+	hex7seg H4(.a(n_t), .y(HEX4));
+	hex7seg H5(.a(n_h), .y(HEX5)); 
  
 endmodule
 
