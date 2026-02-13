@@ -17,23 +17,36 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	     output logic [9:0] LEDR // LEDs above the switches; LED[0] on right
 	     );
 	logic                        clk, go, done;
-	logic [31:0]                 start;
-	logic [15:0]                 count;
-
-	logic [11:0]                 n;
    
 	assign clk = CLOCK_50;
 
 /////////////
 
-	logic k0, k1, k2, k3;
+	logic k0 = 1'b0, k1 = 1'b0, k2, k3;
+	logic k0_raw, k1_raw;
 	logic [9:0] base_number;
 	
-
-	assign k0 = ~KEY[0];
-	assign k1 = ~KEY[1];
+	// changed these to raw keys for debouncing later
+	assign k0_raw = ~KEY[0];
+	assign k1_raw = ~KEY[1];
 	assign k2 = ~KEY[2];
 	assign k3 = ~KEY[3];
+	// we used a buffer to debounce the key so the buffer delays
+	// when the value begins incrementing
+	//  update output only when buffer is all 0s or all 1
+	logic [7:0] k0_buf = 8'd0, k1_buf = 8'd0;
+
+	always_ff @(posedge clk) begin
+
+		k0_buf <= {k0_buf[6:0], k0_raw};
+		k1_buf <= {k1_buf[6:0], k1_raw};
+
+		if (&k0_buf) k0 <= 1'b1;
+		else if (~|k0_buf) k0 <= 1'b0;
+
+		if (&k1_buf) k1 <= 1'b1;
+		else if (~|k1_buf) k1 <= 1'b0;
+	end
 
 	assign LEDR[7:0] = base_number;
 
@@ -41,27 +54,59 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 
 	logic [7:0] offset = 8'd0;
 
-	logic [22:0] hold_ctrl;
+	logic [21:0] hold_ctrl;
 	logic hold_tick;
+	logic k0_prev = 1'b0, k1_prev = 1'b0;
+	logic [7:0] repeat_wait = 8'd0; 
+	logic [7:0] repeat_start_ticks = 8'd2; // delay before repeating
 
 	always_ff @(posedge clk) begin
-		hold_ctrl <= hold_ctrl + 23'd1;
+		hold_ctrl <= hold_ctrl + 22'd1;
 	end
 	
-	assign hold_tick = (hold_ctrl == 23'd0);
+	assign hold_tick = (hold_ctrl == 22'd0);
 
 	always_ff @(posedge clk) begin
+		k0_prev <= k0;
+		k1_prev <= k1;
+
 		// if k2 is pressed reset the difference
 		if (k2) begin
 			offset <= 8'd0;
-			end else if (hold_tick) begin
-			// if only key 0 then increment
-			if (k0 && !k1) begin
+			repeat_wait <= repeat_start_ticks;
+
+		// if only key 0 then increment
+		end else if (k0 && !k1) begin
+			// inc immediatley
+			//
+			if (!k0_prev) begin
 				if (offset != 8'hFF) offset <= offset + 8'd1;
-			// if only key 1 then decrement
-			end else if (k1 && !k0) begin
-				if (offset != 8'h00) offset <= offset - 8'd1;
+				repeat_wait <= repeat_start_ticks;
+
+			//buffer delays the repeat incrementing
+			end else if (hold_tick) begin
+				if (repeat_wait != 8'd0) repeat_wait <= repeat_wait - 8'd1;
+				else if (offset != 8'hFF) offset <= offset + 8'd1;
 			end
+			
+		// if only key 1 then decrement
+		end else if (k1 && !k0) begin
+
+			// one press decrements immediately
+			if (!k1_prev) begin
+
+				if (offset != 8'h00) offset <= offset - 8'd1;
+				repeat_wait <= repeat_start_ticks;
+
+			// wait to start decrementing
+			end else if (hold_tick) begin
+				if (repeat_wait != 8'd0) repeat_wait <= repeat_wait - 8'd1;
+				else if (offset != 8'h00) offset <= offset - 8'd1;
+			end
+
+		end else begin
+
+			repeat_wait <= repeat_start_ticks;
 		end
 	end
 
@@ -74,10 +119,16 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	end
 	
 
-	//start number
+	// number shown on HEX3-HEX5 which is the base n + the offset nubmer
 	logic [31:0] range_start;
+
 	assign go = k3 & ~k3_prev;
-	assign range_start = {22'd0, base_number} + {24'd0, offset};
+        assign range_start = {22'd0, base_number} + {24'd0, offset};
+	// used a mux witht he go bit as the select bit so that
+        // it starts at the base when go is 1 or base + offset wehn go is 0
+        // before, we were start at the wrong position
+	logic [31:0] range_start_mux;
+	assign range_start_mux = go ? {22'd0, base_number} : {24'd0, offset};
 
 	logic [15:0] iters;
 	//logic [15:0] iters_display = 16'd0;
@@ -85,26 +136,24 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	range #(.RAM_WORDS(256), .RAM_ADDR_BITS(8)) u_range (
 		.clk(clk),
 		.go(go),
-		.start(range_start),
+		.start(range_start_mux),
 		.done(done),
 		.count(iters)
 	);
 
 	//logic [11:0] display_number;
 	
-	// display bits ( hundreds, tens, ones)
+	// Display the low 12 bits of each value as three hex digits.
 	logic [3:0] n_h, n_t, n_o;
 	logic [3:0] i_h, i_t, i_o;
 
-	always_comb begin
-		n_h = (range_start / 100) % 10;
-		n_t = (range_start / 10) % 10;
-		n_o = range_start % 10;	
-		
-        i_h = (iters / 100) % 10;
-        i_t = (iters / 10) % 10; 
-        i_o = iters % 10;
-	end
+	assign n_h = range_start[11:8];
+	assign n_t = range_start[7:4];
+	assign n_o = range_start[3:0];
+
+	assign i_h = iters[11:8];
+	assign i_t = iters[7:4];
+	assign i_o = iters[3:0];
 
 	hex7seg H0(.a(i_o), .y(HEX0));
 	hex7seg H1(.a(i_t), .y(HEX1));
@@ -118,4 +167,6 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	assign LEDR[8] = go;
  
 endmodule
+
+
 
