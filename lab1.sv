@@ -53,7 +53,7 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	assign base_number = SW[9:0];
 
 	logic [7:0] offset = 8'd0;
-
+	// buffer for key press delays and counter
 	logic [21:0] hold_ctrl;
 	logic hold_tick;
 	logic k0_prev = 1'b0, k1_prev = 1'b0;
@@ -65,7 +65,7 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	end
 	
 	assign hold_tick = (hold_ctrl == 22'd0);
-
+	// get the initial key press then delay after the buffer is full
 	always_ff @(posedge clk) begin
 		k0_prev <= k0;
 		k1_prev <= k1;
@@ -132,7 +132,7 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 
 	logic [15:0] iters;
 	//logic [15:0] iters_display = 16'd0;
-
+	//get the range from the range module
 	range #(.RAM_WORDS(256), .RAM_ADDR_BITS(8)) u_range (
 		.clk(clk),
 		.go(go),
@@ -142,11 +142,10 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	);
 
 	//logic [11:0] display_number;
-	
-	// Display the low 12 bits of each value as three hex digits.
+	// storage for the number to be displayed	
 	logic [3:0] n_h, n_t, n_o;
 	logic [3:0] i_h, i_t, i_o;
-
+	// assigne these to the range adn iter numbers
 	assign n_h = range_start[11:8];
 	assign n_t = range_start[7:4];
 	assign n_o = range_start[3:0];
@@ -154,7 +153,7 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	assign i_h = iters[11:8];
 	assign i_t = iters[7:4];
 	assign i_o = iters[3:0];
-
+	// display them using hex7seg
 	hex7seg H0(.a(i_o), .y(HEX0));
 	hex7seg H1(.a(i_t), .y(HEX1));
 	hex7seg H2(.a(i_h), .y(HEX2));
@@ -162,9 +161,10 @@ module lab1( input logic        CLOCK_50,  // 50 MHz Clock input
 	hex7seg H3(.a(n_o), .y(HEX3));
 	hex7seg H4(.a(n_t), .y(HEX4));
 	hex7seg H5(.a(n_h), .y(HEX5)); 
-
-	assign LEDR[9] = done;
-	assign LEDR[8] = go;
+	
+	// these are from debugging
+	// assign LEDR[9] = done;
+	// assign LEDR[8] = go;
  
 endmodule
 
